@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.1](https://github.com/d3xter666/ui5-linter/compare/v1.21.0...v1.21.1) (2026-03-06)
+
+
+### Dependencies
+
+* trigger manual patch release ([c816a21](https://github.com/d3xter666/ui5-linter/commit/c816a217cbb09fdd5155e04bac0ebdae16f80359))
+
 ## [1.21.0](https://github.com/d3xter666/ui5-linter/compare/v1.20.12...v1.21.0) (2026-03-06)
 
 
