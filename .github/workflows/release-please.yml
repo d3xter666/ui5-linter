@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      release_as:
+        description: "Optional explicit version (e.g. 1.2.4). If omitted, next patch is computed from .release-please-manifest.json"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -16,10 +22,38 @@ jobs:
       releases_created: ${{steps.release.outputs.releases_created}}
       paths_released: ${{steps.release.outputs.paths_released}}
     steps:
+    - uses: actions/github-script@v7
+      id: manual_release_version
+      if: ${{github.event_name == 'workflow_dispatch'}}
+      with:
+        script: |
+          const inputReleaseAs = context.payload.inputs?.release_as?.trim();
+          if (inputReleaseAs) {
+            core.setOutput("release_as", inputReleaseAs);
+            core.info(`Using manually provided release-as version: ${inputReleaseAs}`);
+            return;
+          }
+
+          const {data} = await github.rest.repos.getContent({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            path: ".release-please-manifest.json",
+            ref: "main"
+          });
+          const content = Buffer.from(data.content, "base64").toString("utf8");
+          const manifest = JSON.parse(content);
+          const currentVersion = manifest["."];
+          const [major, minor, patch] = currentVersion.split(".").map(Number);
+          const nextPatch = `${major}.${minor}.${patch + 1}`;
+
+          core.setOutput("release_as", nextPatch);
+          core.info(`Computed next patch release-as version: ${nextPatch}`);
     - uses: googleapis/release-please-action@v4
       id: release
       with:
         token: ${{secrets.GH_OPENUI5BOT}}
+        target-branch: main
+        release-as: ${{steps.manual_release_version.outputs.release_as}}
   publish-package:
     needs: pull-request
     if: ${{needs.pull-request.outputs.releases_created && toJson(fromJson(needs.pull-request.outputs.paths_released)) != '[]'}}
@@ -52,5 +86,5 @@ jobs:
       run: |
         rm package.json
         mv package.json.bak package.json
-    - name: Publish to npm
-      run: npm publish --access public
+    # - name: Publish to npm
+    #   run: npm publish --access public
